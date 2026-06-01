@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Click Factory PRO</title>
+
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #111;
+  color: white;
+  margin-top: 25px;
+}
+
+#score { font-size: 44px; margin: 10px; }
+
+button {
+  padding: 12px 16px;
+  margin: 6px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+#clickBtn {
+  background: #00c853;
+  font-size: 20px;
+  color: white;
+}
+
+.upgrade { background: #2979ff; color: white; width: 340px; display:block; margin:6px auto; }
+.building { background: #ff9800; color: black; width: 340px; display:block; margin:6px auto; }
+.prestige { background: purple; color: white; width: 340px; display:block; margin:10px auto; }
+
+#achievements {
+  width: 350px;
+  margin: 15px auto;
+  background: #222;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.unlocked { color: gold; }
+</style>
+</head>
+
+<body>
+
+<h1>🛠 Click Factory PRO</h1>
+
+<div id="score">0</div>
+
+<button id="clickBtn">CLICK</button>
+
+<hr>
+
+<h3>⚙️ Upgrades</h3>
+
+<button class="upgrade" onclick="buyClickUpgrade()">
+💡 Click +1 — costo: <span id="clickCost"></span>
+</button>
+
+<button class="upgrade" onclick="buyAutoClicker()">
+🤖 Auto click +1/s — costo: <span id="autoCost"></span>
+</button>
+
+<hr>
+
+<h3>🏭 Tienda</h3>
+
+<button class="building" onclick="buyFarm()">🌾 Granja (+5/s) — <span id="farmCost"></span> | <span id="farms"></span></button>
+<button class="building" onclick="buyFactory()">🏭 Fábrica (+20/s) — <span id="factoryCost"></span> | <span id="factories"></span></button>
+<button class="building" onclick="buyPlant()">⚡ Central (+100/s) — <span id="plantCost"></span> | <span id="plants"></span></button>
+<button class="building" onclick="buyLab()">🚀 Laboratorio (+500/s) — <span id="labCost"></span> | <span id="labs"></span></button>
+
+<hr>
+
+<h3>🌟 Prestigio</h3>
+<button class="prestige" onclick="prestige()">Reiniciar + bonus x nivel</button>
+
+<div id="prestigeInfo"></div>
+
+<hr>
+
+<h3>🏆 Logros</h3>
+<div id="achievements"></div>
+
+<script>
+
+// ===== ESTADO =====
+let score = 0;
+
+let perClick = 1;
+let autoClick = 0;
+
+let farms = 0, factories = 0, plants = 0, labs = 0;
+
+let clickCost = 10;
+let autoCost = 50;
+
+let farmCost = 100;
+let factoryCost = 500;
+let plantCost = 2000;
+let labCost = 10000;
+
+let prestigeLevel = 0;
+let prestigeMultiplier = 1;
+
+let clickCount = 0;
+
+let unlocked = [];
+
+// ===== LOGROS =====
+const achievements = [
+  { id:"c1", name:"👆 Primer click", cond:()=>clickCount>=1 },
+  { id:"s100", name:"💯 100 puntos", cond:()=>score>=100 },
+  { id:"s1000", name:"💰 1000 puntos", cond:()=>score>=1000 },
+  { id:"farm", name:"🌾 Granjero", cond:()=>farms>=1 },
+  { id:"factory", name:"🏭 Industrial", cond:()=>factories>=1 },
+  { id:"plant", name:"⚡ Energía", cond:()=>plants>=1 },
+  { id:"lab", name:"🚀 Ciencia", cond:()=>labs>=1 },
+  { id:"prest", name:"🌟 Prestigio", cond:()=>prestigeLevel>=1 }
+];
+
+// ===== CLICK =====
+document.getElementById("clickBtn").onclick = () => {
+  score += perClick * prestigeMultiplier;
+  clickCount++;
+  checkAch();
+  update();
+  save();
+};
+
+// ===== UPGRADES =====
+function buyClickUpgrade(){
+  if(score>=clickCost){
+    score-=clickCost;
+    perClick++;
+    clickCost = Math.floor(clickCost*1.5);
+    save();
+  }
+}
+
+function buyAutoClicker(){
+  if(score>=autoCost){
+    score-=autoCost;
+    autoClick++;
+    autoCost = Math.floor(autoCost*1.6);
+    save();
+  }
+}
+
+// ===== BUILDINGS =====
+function buyFarm(){
+  if(score>=farmCost){ score-=farmCost; farms++; farmCost*=1.5; save(); }
+}
+function buyFactory(){
+  if(score>=factoryCost){ score-=factoryCost; factories++; factoryCost*=1.7; save(); }
+}
+function buyPlant(){
+  if(score>=plantCost){ score-=plantCost; plants++; plantCost*=1.8; save(); }
+}
+function buyLab(){
+  if(score>=labCost){ score-=labCost; labs++; labCost*=2; save(); }
+}
+
+// ===== PRODUCCIÓN =====
+setInterval(()=>{
+  let income =
+    autoClick +
+    farms*5 +
+    factories*20 +
+    plants*100 +
+    labs*500;
+
+  score += income * prestigeMultiplier;
+
+  checkAch();
+  update();
+  save();
+},1000);
+
+// ===== PRESTIGIO =====
+function prestige(){
+  if(score<5000) return;
+
+  prestigeLevel++;
+  prestigeMultiplier = 1 + prestigeLevel;
+
+  score=0;
+  perClick=1;
+  autoClick=0;
+
+  farms=factories=plants=labs=0;
+
+  clickCost=10;
+  autoCost=50;
+  farmCost=100;
+  factoryCost=500;
+  plantCost=2000;
+  labCost=10000;
+
+  save();
+  update();
+}
+
+// ===== LOGROS =====
+function checkAch(){
+  achievements.forEach(a=>{
+    if(!unlocked.includes(a.id) && a.cond()){
+      unlocked.push(a.id);
+      alert("🏆 Logro: "+a.name);
+      save();
+    }
+  });
+}
+
+function renderAch(){
+  document.getElementById("achievements").innerHTML =
+  achievements.map(a=>{
+    return unlocked.includes(a.id)
+    ? "✔ "+a.name
+    : "🔒 "+a.name;
+  }).join("<br>");
+}
+
+// ===== UI =====
+function update(){
+  document.getElementById("score").innerText=Math.floor(score);
+
+  document.getElementById("clickCost").innerText=clickCost;
+  document.getElementById("autoCost").innerText=autoCost;
+
+  document.getElementById("farmCost").innerText=farmCost;
+  document.getElementById("factoryCost").innerText=factoryCost;
+  document.getElementById("plantCost").innerText=plantCost;
+  document.getElementById("labCost").innerText=labCost;
+
+  document.getElementById("farms").innerText=farms;
+  document.getElementById("factories").innerText=factories;
+  document.getElementById("plants").innerText=plants;
+  document.getElementById("labs").innerText=labs;
+
+  document.getElementById("prestigeInfo").innerText =
+  "Prestigio: "+prestigeLevel+" | x"+prestigeMultiplier;
+
+  renderAch();
+}
+
+// ===== SAVE =====
+function save(){
+  localStorage.setItem("clickFactoryPRO", JSON.stringify({
+    score, perClick, autoClick,
+    farms, factories, plants, labs,
+    clickCost, autoCost,
+    farmCost, factoryCost, plantCost, labCost,
+    prestigeLevel, prestigeMultiplier,
+    clickCount,
+    unlocked
+  }));
+}
+
+function load(){
+  let data = JSON.parse(localStorage.getItem("clickFactoryPRO"));
+  if(!data) return;
+  Object.assign(window,data);
+}
+
+// ===== INIT =====
+load();
+update();
+
+</script>
+
+</body>
+</html>
